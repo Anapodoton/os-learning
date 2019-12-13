@@ -1,4 +1,5 @@
 <!--ts-->
+
    * [os-learning](#os-learning)
       * [实验任务](#实验任务)
    * [1. 操作系统基础](#1-操作系统基础)
@@ -14,8 +15,9 @@
          * [2.1.2 <strong>sched.c</strong>](#212-schedc)
          * [2.1.3 exit.c](#213-exitc)
       * [2.2 基于内核栈切换的进程切换](#22-基于内核栈切换的进程切换)
+         * [2.2.1 用户级线程](#221-用户级线程)
 
-<!-- Added by: anapodoton, at: 2019年12月 9日 星期一 16时20分51秒 CST -->
+<!-- Added by: anapodoton, at: 2019年12月 9日 星期一 18时42分05秒 CST -->
 
 <!--te-->
 
@@ -326,6 +328,209 @@ exit.c 程序主要实现进程终止和退出的相关处理事宜。其中包�
 系统调用 waitpid()用于挂起当前进程，直到 pid 指定的子进程退出(终止)或者收到要求终止该进 程的信号，或者是需要调用一个信号句柄(信号处理程序)。如果 pid 所指的子进程早已退出(已成所谓 的僵死进程)，则本调用将立刻返回。子进程使用的所有资源将释放。该函数的具体操作也要根据其参数 进行不同的处理。详见代码中的相关注释。 
 
 ## 2.2 基于内核栈切换的进程切换
+
+**OS-level threads vs Green Threads**
+
+For clarity, I usually say "OS-level threads" or "native threads" instead of "Kernel-level threads" (which I confused with "kernel threads" in my original answer below.) OS-level threads are created and managed by the OS. Most languages have support for them. (C, recent Java, etc) They are extremely hard to use because you are 100% responsible for preventing problems. In some languages, even the native data structures (such as Hashes or Dictionaries) will break without extra locking code.
+
+The opposite of an OS-thread is a [green thread](http://en.wikipedia.org/wiki/Green_thread) that is managed by your language. These threads are given various names depending on the language (coroutines in C, goroutines in Go, fibers in Ruby, etc). These threads only exist inside your language and not in your OS. Because the language chooses context switches (i.e. at the end of a statement), it prevents TONS of subtle race conditions (such as seeing a partially-copied structure, or needing to lock most data structures). The programmer sees "blocking" calls (i.e. `data = file.read()` ), but the language translates it into async calls to the OS. The language then allows *other* green threads to run while waiting for the result.
+
+Green threads are much simpler for the programmer, but their performance varies: If you have a LOT of threads, green threads can be better for both CPU and RAM. On the other hand, most green thread languages can't take advantage of multiple cores. (You can't even buy a single-core computer or phone anymore!). And a bad library can halt the entire language by doing a blocking OS call.
+
+The best of both worlds is to have one OS thread per CPU, and many green threads that are magically moved around onto OS threads. Languages like Go and Erlang can do this.
+
+> system calls and other uses not available to user-level threads
+
+This is only half true. Yes, you can easily cause problems if you call the OS yourself (i.e. do something that's blocking.) But the language usually has replacements, so you don't even notice. These replacements do call the kernel, just slightly differently than you think.
+
+我们本来是需要去学习进程的切换，但是进程的切换包括指令和资源的切换，我们把资源的切换放到内存里面去学习，先来学习指令的切换，也即线程的切换，线程的切换分为用户级线程和内核级线程。
+
+### 2.2.1 用户级线程
+
+正如我们前面所学习到的那样，进程是十分占用资源的，进程 **=** 资源 **+** 指令执行序列。那么我们很容易想到，为了优化性能，我们可不可以：将资源和指令执行分开 ，一个资源 **+** 多个指令执行序列。
+
+所以我们提出了线程的概念：
+
+> 线程的实质是映射表不变而**PC**指针变。
+
+下面我们尝试实现这一一个浏览器：
+
+- 一个线程用来从服务器接收数据
+
+-  一个线程用来显示文本 
+
+- 一个线程用来处理图片**(**如解压缩**)** 
+- 一个线程用来显示图片 
+
+我们开始实现这个浏览器：
+
+<img src="https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191209195800.png" style="zoom:25%;" />
+
+<img src="https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191209200004.png" style="zoom:25%;" />
+
+<img src="https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191209200824.png" style="zoom:25%;" />
+
+发现没有，如果2个线程只有1个栈，就会出现问题，当第二个Yield被执行的时候，应该204出栈，但是这个时候确是404出栈，这个时候出现了问题。
+
+<img src="../../../Library/Application Support/typora-user-images/image-20191209201200838.png" alt="image-20191209201200838" style="zoom:50%;" />
+
+<img src="https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191209201329.png" style="zoom:50%;" />
+
+<img src="https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191209201614.png" style="zoom:50%;" />
+
+### 2.2.2 内核级线程的样子
+
+<img src="https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191209203045.png" style="zoom:50%;" />
+
+<img src="../../../Library/Application Support/typora-user-images/image-20191209203117609.png" alt="image-20191209203117609" style="zoom:50%;" />
+
+<img src="https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191209203736.png" style="zoom:50%;" />
+
+
+
+<img src="https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191209203759.png" style="zoom:50%;" />
+
+<img src="https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191210105922.png" style="zoom:50%;" />
+
+<img src="https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191210110911.png" style="zoom:50%;" />
+
+<img src="https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191210111052.png" style="zoom:50%;" />
+
+<img src="https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191210111121.png" style="zoom:50%;" />
+
+### 2.2.3 内核级线程的实现
+
+<img src="https://i.loli.net/2019/12/11/8PjDQ5TVEyldAts.png" style="zoom:50%;" />
+
+<img src="https://i.loli.net/2019/12/11/wZ2SG6R3xqp9ujb.png" style="zoom:50%;" />
+
+<img src="../../../Library/Application Support/typora-user-images/image-20191211182238864.png" alt="image-20191211182238864" style="zoom:50%;" />
+
+
+
+<img src="https://i.loli.net/2019/12/11/DZrzSAYnhEIFMVX.png" style="zoom:50%;" />
+
+<img src="https://i.loli.net/2019/12/11/SOGU3zcliTvNAbJ.png" style="zoom:50%;" />
+
+<img src="https://i.loli.net/2019/12/11/SAtNu8qBMseVw7L.png" style="zoom:50%;" />
+
+<img src="https://i.loli.net/2019/12/11/9PZfNECjhoDgBuT.png" style="zoom:50%;" />
+
+
+
+<img src="https://i.loli.net/2019/12/11/VirPey1TlK4kng3.png" style="zoom:50%;" />
+
+![](https://i.loli.net/2019/12/11/gd38lwFOroyJ7qN.png)
+
+![](https://i.loli.net/2019/12/11/tBuDMKspkzVP2Tn.png)
+
+![](https://i.loli.net/2019/12/11/Bo6XbTJ5favYiEH.png)
+
+![](https://i.loli.net/2019/12/11/3WmT9hOlHP2QZ1R.png)
+
+到这里，我们来总结下，CPU运转后，由于有些进程比较耗时，所以我们引入了多进程。如果我们只用一个栈来处理进程的切换，将会造成混乱，所以我们引入了2个栈。有些调用是在内核态的，所以我们必须考虑用户态和内核态的切换，我们引入了切换的5段论。
+
+下面我们想实现一段程序，来交替打印A和B：
+
+```c
+main(){
+if(!fork()){while(1)printf(“A”);} 
+if(!fork()){while(1)printf(“B”);}
+wait();
+}
+```
+
+当我们调用fork的时候，将会通过INT指令进入内核，执行sys_fork,调用copy_process,我们将通过ret指令返回到父进程，iret指令返回到子进程。然后再次执行fork，执行了**schedule** ，然后进行了**switch_to**切换。那么A什么时候可以和B进行交替打印，答案是时钟中断。
+
+## 2.2 信号量的实现和应用
+
+### 2.2.1 进程同步与信号量
+
+**Processes Synchronization and** **Semaphore** 
+
+![](https://i.loli.net/2019/12/12/UBbxaHkZQ3NVXny.png)
+
+注意，这个程序是有问题的，如果，在生产者访问的时候，别切走了，切回来之后，counter被修改了，但是生产者还不知道。
+
+![image-20191212194535873](https://tva1.sinaimg.cn/large/006tNbRwly1g9u6g4o6t0j311g0nggru.jpg)
+
+![image-20191212194939432](https://tva1.sinaimg.cn/large/006tNbRwly1g9u6kbw0ooj312g0ssait.jpg)
+
+![image-20191212195510782](https://tva1.sinaimg.cn/large/006tNbRwly1g9u6q2qzk4j310w0nswkl.jpg)
+
+![image-20191212195730028](https://tva1.sinaimg.cn/large/006tNbRwly1g9u6sii3amj31cs0oy4ny.jpg)
+
+**empty表示空闲缓冲区的个数，full表示已经生产的个数,multx表示互斥信号：**
+
+![image-20191212200905562](https://tva1.sinaimg.cn/large/006tNbRwly1g9u74k1x6yj311e0neafj.jpg)
+
+### 2.2.2 信号量临界区保护
+
+**靠临界区保护信号量，靠信号量实现进程的同步。**
+
+**Critical Section** 
+
+温故而知新:什么是信号量? 通过对这个量的访问和修改，让大 家有序推进。哪里还有问题吗? 
+
+empty=-1，表示已经有一个进程在睡眠了。
+
+![image-20191212202434812](https://tva1.sinaimg.cn/large/006tNbRwly1g9u7kop889j30po0jowi6.jpg)
+
+![image-20191212202747672](https://tva1.sinaimg.cn/large/006tNbRwly1g9u7o0vh87j30ti0nidkp.jpg)
+
+![image-20191212202829655](https://tva1.sinaimg.cn/large/006tNbRwly1g9u7orriy2j31480n8grz.jpg)
+
+![](https://tva1.sinaimg.cn/large/006tNbRwly1g9u7rrexoaj30xo0jy0xd.jpg)
+
+**进入临界区的方法：**
+
+轮换法(也称值日法)，满足互斥，但是不满足有空让进，比如，P0进入后，turn=1，然后由于某种原因，一直在等待，这个时候，P2也无法进入。
+
+![image-20191212203347425](https://tva1.sinaimg.cn/large/006tNbRwly1g9u7u9mh5kj30zy0g6whg.jpg)
+
+然后我们引入了标记法，发现虽然满足了，互斥，有空让进，但是不满足有限等待。
+
+![image-20191212205222610](https://tva1.sinaimg.cn/large/006tNbRwly1g9u8dlhh1dj30ho0usdjv.jpg)
+
+然后我们又引入了非对称标记：
+
+![image-20191212205535763](https://tva1.sinaimg.cn/large/006tNbRwly1g9u8gxtc4ej30ny0hygp8.jpg)
+
+flag[1]=true,turn=1,表示1要进入临界区，并且轮到1进入。
+
+![image-20191212205649568](https://tva1.sinaimg.cn/large/006tNbRwly1g9u8i7pb1dj30k00u242h.jpg)
+
+下面我们只是讨论了2个进程，那么多个进程怎么办呢？
+
+![image-20191213105159256](https://tva1.sinaimg.cn/large/006tNbRwly1g9uwn7i9v5j31640qctvv.jpg)
+
+
+
+![image-20191213105357556](https://tva1.sinaimg.cn/large/006tNbRwly1g9uwp94lelj31bc0qenho.jpg)
+
+面包店算法是在是太复杂了，我们尝试另外的解法，回想一下，我们只允许一个进程进入，这句话意味着什么呢？意味着另一个进程只有被调度才可以进入临界区，那么我们只要阻止时钟中断就好了。即CPU不会在调度。
+
+![image-20191213111729120](https://tva1.sinaimg.cn/large/006tNbRwly1g9uxdquz7aj31a00q6wzf.jpg)
+
+但是多CPU不行，因为我们没法关掉所有CPU的中断。
+
+接下来我们引入了硬件原子指令法：
+
+![image-20191213111052435](https://tva1.sinaimg.cn/large/006tNbRwly1g9ux6v8u7dj314e0rm79r.jpg)
+
+### 2.2.3 信号量的代码实现 
+
+**Coding Semaphore** 
+
+![image-20191213113025775](https://tva1.sinaimg.cn/large/006tNbRwly1g9uxr7xl8uj31aa0pqtxo.jpg)
+
+![image-20191213113358605](https://tva1.sinaimg.cn/large/006tNbRwly1g9uxuwbkp0j31920qynp1.jpg)
+
+![image-20191213113605982](https://tva1.sinaimg.cn/large/006tNbRwly1g9uxx3iru3j31240qcdtz.jpg)
+
+![image-20191213113450967](https://tva1.sinaimg.cn/large/006tNbRwly1g9uxvu4nzpj31ca0q4kd4.jpg)
+
+### 2.2.4 死锁处理
 
 
 

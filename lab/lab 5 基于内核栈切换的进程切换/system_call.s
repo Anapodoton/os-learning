@@ -48,17 +48,21 @@ OLDSS		= 0x2C
 state	= 0		# these are offsets into the task-struct.
 counter	= 4
 priority = 8
-signal	= 12
-sigaction = 16		# MUST be 16 (=len of sigaction)
-blocked = (33*16)
+kernelstack = 12
+signal	= 16
+sigaction = 20		# MUST be 16 (=len of sigaction)
+blocked = (33*16+4)
 
 # offsets within sigaction
 sa_handler = 0
 sa_mask = 4
 sa_flags = 8
 sa_restorer = 12
-// 这是系统调用总数。如果增删了系统调用，必须做相应修改
-nr_system_calls = 74
+
+nr_system_calls = 72
+
+ESP0 = 4
+KERNEL_STACK = 12
 
 /*
  * Ok, I get parallel printer interrupts while using the floppy for some
@@ -67,7 +71,7 @@ nr_system_calls = 74
 .globl system_call,sys_fork,timer_interrupt,sys_execve
 .globl hd_interrupt,floppy_interrupt,parallel_interrupt
 .globl device_not_available, coprocessor_error
-
+.globl switch_to, first_return_from_kernel
 .align 2
 bad_sys_call:
 	movl $-1,%eax
@@ -171,7 +175,54 @@ device_not_available:
 	popl %esi
 	popl %ebp
 	ret
+.align 2
+switch_to:
+    pushl %ebp
+    movl %esp,%ebp
+    pushl %ecx
+    pushl %ebx
+    pushl %eax
+    movl 8(%ebp),%ebx
+    cmpl %ebx,current
+    je 1f
+/* ! switch PCB */
+    movl %ebx,%eax
+    xchgl %eax,current
+/* ! rewrite kernel statck pointer in TSS */
+    movl tss,%ecx
+    addl $4096,%ebx
+    movl %ebx,ESP0(%ecx)
+/* ! switch kernel statck */
+    movl %esp,KERNEL_STACK(%eax)
+    movl 8(%ebp),%ebx /*read ebx again*/
+    movl KERNEL_STACK(%ebx),%esp
+/* ! switch LDT */
+    movl 12(%ebp),%ecx
+    lldt %cx
 
+
+    movl $0x17,%ecx /* fs descript the pointer of user state memory*/
+    mov %cx,%fs
+/* math process*/
+    cmpl %eax,last_task_used_math
+    jne 1f
+    clts
+
+1: popl %eax
+    popl %ebx
+    popl %ecx
+    popl %ebp
+ret
+
+first_return_from_kernel:
+    popl %edx
+    popl %edi
+    popl %esi
+    pop %gs
+    pop %fs
+    pop %es
+    pop %ds
+    iret
 .align 2
 timer_interrupt:
 	push %ds		# save ds,es and put kernel data space
