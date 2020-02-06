@@ -42,7 +42,7 @@
          * [4.2.5 目录解析代码的实现](#425-目录解析代码的实现)
    * [5. 总结](#5-总结)
 
-<!-- Added by: anapodoton, at: 2019年12月17日 星期二 13时42分52秒 CST -->
+<!-- Added by: anapodoton, at: 2019年12月17日 星期二 16时57分15秒 CST -->
 
 <!--te-->
 
@@ -428,6 +428,10 @@ This is only half true. Yes, you can easily cause problems if you call the OS yo
 <img src="https://i.loli.net/2019/12/11/8PjDQ5TVEyldAts.png" style="zoom:50%;" />
 
 <img src="https://i.loli.net/2019/12/11/wZ2SG6R3xqp9ujb.png" style="zoom:50%;" />
+
+我们来看下中断过程调用。
+
+<img src="https://raw.githubusercontent.com/haojunsheng/ImageHost/master/20191217165351.png" style="zoom:50%;" />
 
 <img src="../../../Library/Application Support/typora-user-images/image-20191211182238864.png" alt="image-20191211182238864" style="zoom:50%;" />
 
@@ -856,8 +860,6 @@ CPU 进行地址变换(映射)的主要目的是为了解决虚拟内存空间�
 ### 4.2.5 目录解析代码的实现
 
 **Directory Resolution**
-
-
 
 # 5. 总结
 
