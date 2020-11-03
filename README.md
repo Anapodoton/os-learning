@@ -92,7 +92,7 @@ CS为代码段寄存器，IP为指令指针寄存器。
 
 **(6)** 设置**cs=0x07c0**，**ip=0x0000** 
 
-![](https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191205231815.png)
+![](images/20191205231815.png)
 
 ![](https://raw.githubusercontent.com/Anapodoton/ImageHost/master/img/20191205231920.png)
 
