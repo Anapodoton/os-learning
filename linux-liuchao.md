@@ -197,3 +197,41 @@ CPU 其实也不是单纯的一块，它包括三个部分，运算单元、数�
 
 [x86参考](http://www.cs.virginia.edu/~evans/cs216/guides/x86.html)
 
+IP 寄存器就是指令指针寄存器(Instruction Pointer Register)，指向代码段中下一条指令 的位置。CPU 会根据它来不断地将指令从内存的代码段中，加载到 CPU 的指令队列中，然 后交给运算单元去执行。
+
+CS 就是代码段寄存器(Code Segment Register)，通过它可以找到代码在内存中的位置;
+
+DS 是数据段的寄存器，通过它可以找到数据在内存中的位置。
+
+SS 是栈寄存器(Stack Register)。
+
+## 7. **从**BIOS到bootloader
+
+![image-20201103164244982](https://raw.githubusercontent.com/haojunsheng/ImageHost/master/img/20201103164249.png)
+
+
+
+## 8. 内核初始化
+
+![image-20201103194017368](https://cdn.jsdelivr.net/gh/haojunsheng/ImageHost/img/20201103194211.png)
+
+进程切换：
+
+![image-20201103170135417](https://raw.githubusercontent.com/haojunsheng/ImageHost/master/img/20201103170648.png)
+
+## 9. 系统调用
+
+![image-20201103194409125](https://cdn.jsdelivr.net/gh/haojunsheng/ImageHost/img/20201103194409.png)
+
+
+
+
+
+
+
+
+
+
+
+
+

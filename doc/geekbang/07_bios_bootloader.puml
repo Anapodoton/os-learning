@@ -1,0 +1,24 @@
+@startuml
+:电脑上电;
+note left
+CS设置为0xFFFF，将IP设置为0x0000,
+所以第一条指令就会指向0xFFFF0
+end note
+:BIOS;
+note right
+    Basic Input and Output System
+    基本输入输出系统
+    将boot.img从硬盘加载到内存中的0x7c00来运行
+end note
+:引导扇区
+boot.img;
+:diskboot.img;
+:lzma_decompress.img
+     实模式到保护模式
+     建立分段分页
+     打开地址线;
+: kernel.img
+选择操作系统;
+:启动内核;
+
+@enduml
