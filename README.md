@@ -865,3 +865,8 @@ CPU 进行地址变换(映射)的主要目的是为了解决虚拟内存空间�
 
 <img src="https://tva1.sinaimg.cn/large/006tNbRwly1g9yv6db62bj31gq0qg1kx.jpg" alt="image-20191216210324134" style="zoom:50%;" />
 
+
+
+# 参考
+
+https://github.com/haojunsheng/os-learning
